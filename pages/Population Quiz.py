@@ -1,8 +1,10 @@
 import time
+
 import streamlit as st
 import requests
 import random
 import matplotlib.pyplot as plt
+
 
 # Function to fetch population data
 def fetch_population_data():
@@ -13,11 +15,13 @@ def fetch_population_data():
         population_values = data['value']
         geo_index_to_code = {str(v): k for k, v in data['dimension']['geo']['category']['index'].items()}
         geo_code_to_name = data['dimension']['geo']['category']['label']
-        population_data = {geo_code_to_name[geo_index_to_code[k]]: v for k, v in population_values.items() if k in geo_index_to_code}
+        population_data = {geo_code_to_name[geo_index_to_code[k]]: v for k, v in population_values.items() if
+                           k in geo_index_to_code}
         return population_data
     else:
         st.error(f"Failed to retrieve data: {response.status_code}")
         return {}
+
 
 # Function to generate all questions at once
 def generate_questions(population_data):
@@ -44,6 +48,7 @@ def generate_questions(population_data):
         questions.append((question, options, correct_population))
     return questions
 
+
 # Main block for the Streamlit app
 def main():
     st.title('Population Quiz')
@@ -60,42 +65,52 @@ def main():
             user_choice = st.radio("Choose the correct answer:",
                                    [f"{idx + 1}: {option}" for idx, option in enumerate(options)],
                                    key='user_choice')
-            if st.button("Submit"):
+
+            submit_button_placeholder = st.empty()
+            if submit_button_placeholder.button("Submit", key=f'submit_{st.session_state.question_count}'):
                 if user_choice:
+                    isSuccess = False
                     if int(user_choice.split(': ')[0]) == options.index(correct_answer) + 1:
+                        isSuccess = True
                         st.success("Correct!")
                         st.session_state.score += 1
                     else:
                         st.error("Incorrect!")
                         st.write(f"The correct population is {correct_answer}.")
+                        submit_button_placeholder.empty()
 
+                    print(st.session_state.score)
                     st.session_state.question_count += 1
                     if st.session_state.question_count < 10:
-                        next_button = st.button("Next Question")
-                        if next_button:
+                        # if the answer is success , should go to the next question automatically after 1 second
+                        if isSuccess:
+                            time.sleep(0.7)
                             st.experimental_rerun()
+                        elif st.button("Next Question"):
+                            pass  # No need to do anything here, next question will automatically load
                     else:
-                        st.experimental_rerun()  # Final results page
+                        submit_button_placeholder.empty()
+                        correct_count = st.session_state.score
+                        print(correct_count)
+                        incorrect_count = 10 - correct_count
+                        print(incorrect_count)
+                        labels = ['Correct Answers', 'Incorrect Answers']
+                        sizes = [correct_count, incorrect_count]
+                        explode = (0.1, 0)  # explode 1st slice
+                        fig1, ax1 = plt.subplots()
+                        ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%', startangle=90)
+                        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+                        st.pyplot(fig1)
+
+                        st.write(f"Final Score: {st.session_state.score}/10")
+                        st.session_state.question_count = 0  # Reset question count for restart
+
                 else:
                     st.error("Please choose an answer to proceed!")
-        else:
-            display_results()
 
-def display_results():
-    st.subheader("Quiz Results")
-    correct_count = st.session_state.score
-    incorrect_count = 10 - correct_count
-    labels = ['Correct Answers', 'Incorrect Answers']
-    sizes = [correct_count, incorrect_count]
-    explode = (0.1, 0)  # explode 1st slice
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    st.pyplot(fig1)
-    st.write(f"Final Score: {st.session_state.score}/10")
-    if st.button("Restart Quiz"):
-        st.session_state.questions = None
-        st.experimental_rerun()
+    else:
+        st.error("Unable to load population data.")
+
 
 if __name__ == "__main__":
     main()

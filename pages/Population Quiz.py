@@ -89,11 +89,13 @@ def main():
                     if st.session_state.question_count < 10:
                         st.button("Next Question")  # This button does nothing but trigger rerender.
                     else:
-                        display_results()
+                        st.session_state.show_results = True
+                        st.experimental_rerun()
                 else:
                     st.error("Please choose an answer to proceed!")
-        else:
+        elif st.session_state.show_results:
             display_results()
 
 if __name__ == "__main__":
     main()
+
